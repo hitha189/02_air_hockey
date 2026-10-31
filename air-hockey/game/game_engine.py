@@ -38,6 +38,11 @@ class GameEngine:
         )
         self.ai = ComputerAI()
 
+        # Task 2: match score, plus a latch so one goal is only counted once
+        self.player_score = 0
+        self.computer_score = 0
+        self._goal_latched = False
+
     def _launch_puck(self):
         angle_choices = [0.3, 0.6, -0.3, -0.6]
         direction = random.choice([-1, 1])
@@ -70,18 +75,53 @@ class GameEngine:
         self._handle_goals()
 
     def _handle_goals(self):
-        if self.puck.x - self.puck.radius < MARGIN:
-            if GOAL_TOP < self.puck.y < GOAL_BOTTOM:
-                self._reset_puck()
+        puck = self.puck
+        left_edge = puck.x - puck.radius
+        right_edge = puck.x + puck.radius
+
+        # The whole puck must fit between the goal posts to count as "in the gap".
+        in_gap = GOAL_TOP + puck.radius <= puck.y <= GOAL_BOTTOM - puck.radius
+
+        # After a goal, ignore the goal zones until the puck is back in play.
+        if self._goal_latched:
+            if left_edge >= MARGIN and right_edge <= WIDTH - MARGIN:
+                self._goal_latched = False
             else:
-                self.puck.x = MARGIN + self.puck.radius
-                self.puck.vx = -self.puck.vx
-        elif self.puck.x + self.puck.radius > WIDTH - MARGIN:
-            if GOAL_TOP < self.puck.y < GOAL_BOTTOM:
-                self._reset_puck()
+                return
+
+        if left_edge < MARGIN:                       # touching the left end wall
+            if in_gap:
+                if right_edge < MARGIN:              # fully past the left end line
+                    self._score_goal("computer")
+            else:                                    # wall (not goal): bounce back
+                puck.x = MARGIN + puck.radius
+                puck.vx = abs(puck.vx)
+        elif right_edge > WIDTH - MARGIN:            # touching the right end wall
+            if in_gap:
+                if left_edge > WIDTH - MARGIN:       # fully past the right end line
+                    self._score_goal("player")
             else:
-                self.puck.x = WIDTH - MARGIN - self.puck.radius
-                self.puck.vx = -self.puck.vx
+                puck.x = WIDTH - MARGIN - puck.radius
+                puck.vx = -abs(puck.vx)
+
+    def _score_goal(self, scorer):
+        """Award one point and reset. The latch stops a second count."""
+        if self._goal_latched:
+            return
+        if scorer == "player":
+            self.player_score += 1
+        else:
+            self.computer_score += 1
+        self._goal_latched = True
+        self._reset_puck()
+
+    def get_winner(self):
+        """Result based on the current score: 'Player', 'Computer' or 'Draw'."""
+        if self.player_score > self.computer_score:
+            return "Player"
+        if self.computer_score > self.player_score:
+            return "Computer"
+        return "Draw"
 
     def _reset_puck(self):
         self.puck.x, self.puck.y = WIDTH / 2, HEIGHT / 2
@@ -91,6 +131,7 @@ class GameEngine:
     def draw(self, surface, font):
         from game import renderer
         renderer.draw_table(surface)
+        renderer.draw_scores(surface, font, self.player_score, self.computer_score)
         renderer.draw_paddle(surface, self.player, renderer.COLOR_PLAYER)
         renderer.draw_paddle(surface, self.computer, renderer.COLOR_COMPUTER)
         renderer.draw_puck(surface, self.puck)

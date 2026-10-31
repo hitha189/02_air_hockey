@@ -47,6 +47,15 @@ def draw_text(surface, font, text, pos, color=COLOR_TEXT):
     surface.blit(font.render(text, True, color), pos)
 
 
+def draw_scores(surface, font, player_score, computer_score):
+    """Player's score on the left of the centre line, computer's on the right."""
+    y = MARGIN + 8
+    player_surf = font.render(f"You: {player_score}", True, COLOR_PLAYER)
+    computer_surf = font.render(f"Computer: {computer_score}", True, COLOR_COMPUTER)
+    surface.blit(player_surf, player_surf.get_rect(topright=(WIDTH // 2 - 20, y)))
+    surface.blit(computer_surf, computer_surf.get_rect(topleft=(WIDTH // 2 + 20, y)))
+
+
 def draw_banner(surface, font, text):
     surf = font.render(text, True, (255, 220, 80))
     rect = surf.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2))
