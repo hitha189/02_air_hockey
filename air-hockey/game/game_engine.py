@@ -7,7 +7,10 @@ there is no scoring, no match timer, and the reset that happens after
 a goal is incomplete. That's what Tasks 2-4 fix/add.
 """
 
+import math
 import random
+
+import pygame
 
 from game.puck import Puck
 from game.paddle import Paddle
@@ -19,6 +22,8 @@ PLAYER_SPEED = 6
 PUCK_RADIUS = 12
 PADDLE_RADIUS = 28
 INITIAL_PUCK_SPEED = 4.5
+MATCH_SECONDS = 30
+RESULT_TEXT = {"Player": "You win", "Computer": "Computer wins", "Draw": "Draw"}
 
 
 class GameEngine:
@@ -43,6 +48,22 @@ class GameEngine:
         self.computer_score = 0
         self._goal_latched = False
 
+        # Task 3: 30-second match clock (real elapsed time, not frame counting)
+        self._start_ticks = pygame.time.get_ticks()
+        self.match_over = False
+        self.result_text = ""
+
+    def time_left(self):
+        """Seconds left in the match, measured from the real clock."""
+        if self.match_over:
+            return 0.0
+        elapsed = (pygame.time.get_ticks() - self._start_ticks) / 1000.0
+        return max(0.0, MATCH_SECONDS - elapsed)
+
+    def _end_match(self):
+        self.match_over = True
+        self.result_text = RESULT_TEXT[self.get_winner()]
+
     def _launch_puck(self):
         angle_choices = [0.3, 0.6, -0.3, -0.6]
         direction = random.choice([-1, 1])
@@ -51,7 +72,8 @@ class GameEngine:
         self.puck.vy = INITIAL_PUCK_SPEED * vy_factor
 
     def handle_input(self, keys_pressed):
-        import pygame
+        if self.match_over:
+            return
         dx = dy = 0
         if keys_pressed[pygame.K_UP]:
             dy -= PLAYER_SPEED
@@ -64,6 +86,12 @@ class GameEngine:
         self.player.move_by(dx, dy)
 
     def update(self):
+        if self.match_over:
+            return                      # match finished: everything stays frozen
+        if self.time_left() <= 0:
+            self._end_match()
+            return
+
         self.ai.update(self.computer, self.puck)
 
         self.puck.move()
@@ -132,6 +160,9 @@ class GameEngine:
         from game import renderer
         renderer.draw_table(surface)
         renderer.draw_scores(surface, font, self.player_score, self.computer_score)
+        renderer.draw_timer(surface, font, math.ceil(self.time_left()))
         renderer.draw_paddle(surface, self.player, renderer.COLOR_PLAYER)
         renderer.draw_paddle(surface, self.computer, renderer.COLOR_COMPUTER)
         renderer.draw_puck(surface, self.puck)
+        if self.match_over:
+            renderer.draw_match_over(surface, font, self.result_text)

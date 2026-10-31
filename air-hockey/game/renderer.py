@@ -48,12 +48,32 @@ def draw_text(surface, font, text, pos, color=COLOR_TEXT):
 
 
 def draw_scores(surface, font, player_score, computer_score):
-    """Player's score on the left of the centre line, computer's on the right."""
+    """Player's score at the top left, computer's at the top right."""
     y = MARGIN + 8
     player_surf = font.render(f"You: {player_score}", True, COLOR_PLAYER)
     computer_surf = font.render(f"Computer: {computer_score}", True, COLOR_COMPUTER)
-    surface.blit(player_surf, player_surf.get_rect(topright=(WIDTH // 2 - 20, y)))
-    surface.blit(computer_surf, computer_surf.get_rect(topleft=(WIDTH // 2 + 20, y)))
+    surface.blit(player_surf, player_surf.get_rect(topleft=(MARGIN + 12, y)))
+    surface.blit(computer_surf, computer_surf.get_rect(topright=(WIDTH - MARGIN - 12, y)))
+
+
+def draw_timer(surface, font, seconds_left):
+    """Remaining match time, top centre. Turns red for the last 5 seconds."""
+    color = (255, 90, 90) if seconds_left <= 5 else COLOR_TEXT
+    surf = font.render(f"Time: {seconds_left}", True, color)
+    surface.blit(surf, surf.get_rect(midtop=(WIDTH // 2, MARGIN + 8)))
+
+
+def draw_match_over(surface, font, result_text):
+    """Result banner on a dark panel, with a restart hint underneath."""
+    centre = (surface.get_width() // 2, surface.get_height() // 2)
+    result = font.render(result_text, True, (255, 220, 80))
+    hint = font.render("Press R to restart", True, COLOR_TEXT)
+    result_rect = result.get_rect(center=(centre[0], centre[1] - 16))
+    hint_rect = hint.get_rect(center=(centre[0], centre[1] + 20))
+    panel = result_rect.union(hint_rect).inflate(48, 28)
+    pygame.draw.rect(surface, COLOR_BG, panel, border_radius=10)
+    surface.blit(result, result_rect)
+    surface.blit(hint, hint_rect)
 
 
 def draw_banner(surface, font, text):
