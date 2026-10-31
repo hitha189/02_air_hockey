@@ -64,9 +64,13 @@ class GameEngine:
         self.match_over = True
         self.result_text = RESULT_TEXT[self.get_winner()]
 
-    def _launch_puck(self):
+    def _launch_puck(self, direction=None):
+        """Give the puck a fresh, non-zero velocity.
+        direction: -1 = toward the player (left), +1 = toward the computer
+        (right), None = random (used for the very first serve)."""
         angle_choices = [0.3, 0.6, -0.3, -0.6]
-        direction = random.choice([-1, 1])
+        if direction is None:
+            direction = random.choice([-1, 1])
         vy_factor = random.choice(angle_choices)
         self.puck.vx = INITIAL_PUCK_SPEED * direction
         self.puck.vy = INITIAL_PUCK_SPEED * vy_factor
@@ -138,10 +142,12 @@ class GameEngine:
             return
         if scorer == "player":
             self.player_score += 1
+            toward = 1                  # computer was scored on: serve to the right
         else:
             self.computer_score += 1
+            toward = -1                 # player was scored on: serve to the left
         self._goal_latched = True
-        self._reset_puck()
+        self._reset_puck(toward)
 
     def get_winner(self):
         """Result based on the current score: 'Player', 'Computer' or 'Draw'."""
@@ -151,10 +157,12 @@ class GameEngine:
             return "Computer"
         return "Draw"
 
-    def _reset_puck(self):
+    def _reset_puck(self, toward=None):
+        """Centre the puck and serve it immediately (never leave it at rest).
+        Position AND both velocity components are overwritten, so nothing from
+        the previous point carries over."""
         self.puck.x, self.puck.y = WIDTH / 2, HEIGHT / 2
-        self.puck.vx = 0
-        self.puck.vy = 0
+        self._launch_puck(toward)
 
     def draw(self, surface, font):
         from game import renderer
